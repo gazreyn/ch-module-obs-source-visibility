@@ -1,0 +1,14 @@
+{
+    "name": "obs-source-visibility",
+    "version": "1.0.0",
+    "main": "index.js",
+    "casthub": {
+        "min_width": 4,
+        "min_height": 3,
+        "width": 5,
+        "height": 4,
+        "files": {
+            "template": "src/template.html"
+        }
+    }
+}
