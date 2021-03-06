@@ -1,8 +1,11 @@
+import { CardIO, PropType, PropList, PropItem, PropOptions, WS } from '@casthub/types';
+import { Scene } from 'obs-websocket-js';
 import css from '@/styles.scss'
 
 export default class extends window.casthub.module<{
     sceneItem: string
 }>{
+    ws: WS;
     /**
      * Initialize the new Module.
      */
@@ -14,10 +17,6 @@ export default class extends window.casthub.module<{
 
         // Set the CSS from the external file.
         this.css = css;
-
-        this.$icon = this.$container.querySelector('#status-icon');
-        this.$label = this.$container.querySelector('#label');
-        this.$module = this.$container;
 
         /**
          * Used to store all detected sources and scenes
@@ -32,6 +31,11 @@ export default class extends window.casthub.module<{
          * @type {WS|null}
          */
         this.ws = null;
+
+        // HTML Elements to manipulate
+        this.$icon = this.$container.querySelector('#status-icon');
+        this.$label = this.$container.querySelector('#label');
+        this.$module = this.$container;
     }
 
     /**
@@ -39,16 +43,16 @@ export default class extends window.casthub.module<{
      *
      * @return {Promise}
      */
-    async mounted() {
+    public async mounted(): Promise<void> {
         //
 
         const { id } = this.identity;
         this.ws = await window.casthub.ws(id);
 
-        await this.fetch();
+        this.sceneItemMap = await this.generateSceneItemMap();
+
         await this.refresh();
 
-        // When the active Scene is changed, run with it.
         this.ws.on('SceneItemVisibilityChanged', ({ sceneName, itemName }) => {
             if (
                 sceneName !==
@@ -66,32 +70,27 @@ export default class extends window.casthub.module<{
      *
      * @return {Promise}
      */
-    async prepareProps() {
-        //
+    async prepareProps(): Promise<PropList> {
+        let options: PropOptions = {};
 
-        let options = {};
+        const items: string[] = Object.keys(this.sceneItemMap);
+        const itemCount: number = items.length;
 
-        const items = Object.keys(this.sceneItemMap);
-        const itemCount = items.length;
-
-        for (let i = 0; i < itemCount; i++) {
-            options[items[i]] = {
-                text: `${this.sceneItemMap[items[i]].sceneName} - ${
-                    this.sceneItemMap[items[i]].sourceName
-                } `,
-                icon: 'widgets',
-            };
+        for(let i = 0; i < itemCount; i++) {
+            options[items[i]] = { text: `${this.sceneItemMap[items[i]].sceneName} - ${this.sceneItemMap[items[i]].sourceName} `, icon: 'widgets'};
         }
 
+        const sceneItem : PropItem = {
+            type: PropType.Select,
+            required: true,
+            default: null,
+            label: 'Source',
+            help: 'Select a source to toggle',
+            options
+        };
+
         return {
-            sceneItem: {
-                type: 'select',
-                required: true,
-                default: null,
-                label: 'Source',
-                help: 'Select a source to toggle',
-                options,
-            },
+            sceneItem
         };
     }
 
@@ -102,7 +101,7 @@ export default class extends window.casthub.module<{
      * @param {*} value
      * @param {Boolean} initial Whether this is the initial value, `false` if it's an update
      */
-    onPropChange(key, value, initial) {
+    public onPropChange(key: string, value: any, initial: boolean): void {
         //
         if (initial) return;
         if (key !== 'sceneItem') return; // Stop here if it's not sceneItem prop
@@ -110,25 +109,27 @@ export default class extends window.casthub.module<{
         this.refresh();
     }
 
-    async fetch() {
+    public async generateSceneItemMap(): Promise<any> {
+
+        const itemMap = {};
 
         const scenes = await this.getScenes();
-
-        scenes.forEach((scene) => {
+        
+        scenes.forEach(scene => {
             const { sources } = scene;
-            sources.forEach((source) => {
-                const generatedName = `${encodeURI(scene.name)}|${encodeURI(
-                    source.name
-                )}`;
-                this.sceneItemMap[generatedName] = {
+            sources.forEach(source => {
+                const generatedName: string = `${encodeURI(scene.name)}|${encodeURI(source.name)}`;
+                itemMap[generatedName] = {
                     sceneName: scene.name,
-                    sourceName: source.name,
-                };
+                    sourceName: source.name
+                }
             });
         });
+
+        return itemMap;
     }
 
-    async refresh() {
+    public async refresh(): Promise<void> {
         
         if (
             !this.sceneItemMap.hasOwnProperty(this.props.sceneItem) ||
@@ -137,20 +138,20 @@ export default class extends window.casthub.module<{
             return this.updateSourceState('No Source Selected!');
         }
 
-        const visible = await this.getSourceVisibility(
+        const isVisible: boolean = await this.getSourceVisibility(
             this.sceneItemMap[this.props.sceneItem].sceneName,
             this.sceneItemMap[this.props.sceneItem].sourceName
         );
 
-        return this.updateSourceState(
+        this.updateSourceState(
             `${this.sceneItemMap[this.props.sceneItem].sceneName} - ${
                 this.sceneItemMap[this.props.sceneItem].sourceName
             }`,
-            visible
+            isVisible
         );
     }
 
-    updateSourceState(text, state = null) {
+    public updateSourceState(text: string, state: boolean = null): void {
         switch (state) {
             case null:
                 this.$icon.setAttribute('type', 'casthub');
@@ -171,7 +172,7 @@ export default class extends window.casthub.module<{
         this.$label.innerText = text;
     }
 
-    async getSourceVisibility(scene, source) {
+    public async getSourceVisibility(scene: string, source: string): Promise<boolean> {
         const sourceSettings = await this.ws.send('GetSceneItemProperties', {
             'scene-name': scene,
             item: source,
@@ -181,7 +182,7 @@ export default class extends window.casthub.module<{
         return visible;
     }
 
-    async getScenes() {
+    public async getScenes(): Promise<Scene[]> {
         const { scenes } = await this.ws.send('GetSceneList');
         return scenes;
     }
