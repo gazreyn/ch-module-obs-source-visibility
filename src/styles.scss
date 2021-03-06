@@ -8,13 +8,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    /* background-color: #3f3f3f; */
+    // background: linear-gradient(180deg,#00faff 0,#007df0);
 }
 .module.visible {
-    background-color: green;
+    background: linear-gradient(120deg,hsl(145, 90%, 50%) 0%, hsl(145, 50%, 50%) 100%);
 }
 .module.hidden {
-    background-color: red;
+    background: linear-gradient(120deg,hsl(0, 90%, 50%) 0%, hsl(0, 50%, 50%) 100%);
 }
 .source-name {
     color: #fff;

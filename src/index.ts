@@ -154,7 +154,7 @@ export default class extends window.casthub.module<{
     public updateSourceState(text: string, state: boolean = null): void {
         switch (state) {
             case null:
-                this.$icon.setAttribute('type', 'casthub');
+                this.$icon.setAttribute('type', 'obs');
                 this.$module.className = 'module';
                 break;
             case true:
