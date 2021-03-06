@@ -47,7 +47,13 @@ export default class extends window.casthub.module<{
         //
 
         const { id } = this.identity;
-        this.ws = await window.casthub.ws(id);
+
+        try {
+            this.ws = await window.casthub.ws(id);
+        } catch(err) {
+            console.error(err);
+            throw new Error('Unable to connect to OBS Websocket');
+        }
 
         this.sceneItemMap = await this.generateSceneItemMap();
 
